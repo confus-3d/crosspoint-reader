@@ -98,8 +98,7 @@ void TxtReaderActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
   if (txt && readingSessionStartMs != 0) {
-    const uint32_t elapsedSeconds = (millis() - readingSessionStartMs) / 1000U;
-    addReadingTimeToCache(txt->getCachePath(), elapsedSeconds);
+    RECENT_BOOKS.addBookReadingTime(txt->getPath(), (millis() - readingSessionStartMs) / 1000U);
   }
   readingSessionStartMs = 0;
 
@@ -578,6 +577,11 @@ void TxtReaderActivity::saveProgress() const {
     data[3] = 0;
     f.write(data, 4);
     f.close();
+  }
+
+  if (totalPages > 0) {
+    const int percent = static_cast<int>(((static_cast<uint32_t>(currentPage) + 1U) * 100U) / totalPages);
+    RECENT_BOOKS.updateBookProgress(txt->getPath(), percent);
   }
 }
 
