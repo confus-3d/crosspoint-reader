@@ -10,11 +10,6 @@
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
-#include "util/StringUtils.h"
-
-namespace {
-constexpr unsigned long GO_HOME_MS = 1000;
-}  // namespace
 
 void RecentBooksActivity::loadRecentBooks() {
   recentBooks.clear();
@@ -102,7 +97,10 @@ void RecentBooksActivity::render(Activity::RenderLock&&) {
     GUI.drawList(
         renderer, Rect{0, contentTop, pageWidth, contentHeight}, recentBooks.size(), selectorIndex,
         [this](int index) { return recentBooks[index].title; }, [this](int index) { return recentBooks[index].author; },
-        [this](int index) { return UITheme::getFileIcon(recentBooks[index].path); });
+        [this](int index) { return UITheme::getFileIcon(recentBooks[index].path); },
+        [this](int index) { return recentBooks[index].readPercentText; }, false,
+        [this](int index) { return recentBooks[index].timingText; },
+        [this](int index) { return static_cast<int>(recentBooks[index].readPercent); });
   }
 
   // Help text

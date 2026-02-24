@@ -8,6 +8,7 @@
 #include <Xtc.h>
 
 #include <algorithm>
+#include <limits>
 
 #include "util/StringUtils.h"
 
@@ -17,21 +18,49 @@ constexpr char RECENT_BOOKS_FILE_BIN[] = "/.crosspoint/recent.bin";
 constexpr char RECENT_BOOKS_FILE_JSON[] = "/.crosspoint/recent.json";
 constexpr char RECENT_BOOKS_FILE_BAK[] = "/.crosspoint/recent.bin.bak";
 constexpr int MAX_RECENT_BOOKS = 10;
+
+int clampPercent(const int value) {
+  if (value < 0) {
+    return 0;
+  }
+  if (value > 100) {
+    return 100;
+  }
+  return value;
+}
+
+std::string formatDuration(uint32_t seconds) {
+  const uint32_t minutes = (seconds + 30U) / 60U;
+  const uint32_t hours = minutes / 60U;
+  const uint32_t remainingMinutes = minutes % 60U;
+  const std::string minuteText =
+      (remainingMinutes < 10 ? std::string("0") : std::string("")) + std::to_string(remainingMinutes);
+  return std::to_string(hours) + "h " + minuteText + "m";
+}
 }  // namespace
 
 RecentBooksStore RecentBooksStore::instance;
 
 void RecentBooksStore::addBook(const std::string& path, const std::string& title, const std::string& author,
                                const std::string& coverBmpPath) {
+  uint32_t readTimeSeconds = 0;
+  uint8_t readPercent = 0;
+  int32_t remainingTimeSeconds = -1;
+
   // Remove existing entry if present
   auto it =
       std::find_if(recentBooks.begin(), recentBooks.end(), [&](const RecentBook& book) { return book.path == path; });
   if (it != recentBooks.end()) {
+    readTimeSeconds = it->readTimeSeconds;
+    readPercent = it->readPercent;
+    remainingTimeSeconds = it->remainingTimeSeconds;
     recentBooks.erase(it);
   }
 
   // Add to front
-  recentBooks.insert(recentBooks.begin(), {path, title, author, coverBmpPath});
+  recentBooks.insert(recentBooks.begin(),
+                     {path, title, author, coverBmpPath, readTimeSeconds, readPercent, remainingTimeSeconds});
+  updateDerivedFields(recentBooks.front());
 
   // Trim to max size
   if (recentBooks.size() > MAX_RECENT_BOOKS) {
@@ -52,6 +81,50 @@ void RecentBooksStore::updateBook(const std::string& path, const std::string& ti
     book.coverBmpPath = coverBmpPath;
     saveToFile();
   }
+}
+
+void RecentBooksStore::updateReadingStats(const std::string& path, uint32_t sessionReadSeconds, uint8_t readPercent) {
+  auto it =
+      std::find_if(recentBooks.begin(), recentBooks.end(), [&](const RecentBook& book) { return book.path == path; });
+
+  if (it == recentBooks.end()) {
+    RecentBook book = getDataFromBook(path);
+    if (book.title.empty()) {
+      return;
+    }
+    updateDerivedFields(book);
+    recentBooks.insert(recentBooks.begin(), book);
+    if (recentBooks.size() > MAX_RECENT_BOOKS) {
+      recentBooks.resize(MAX_RECENT_BOOKS);
+    }
+    it = recentBooks.begin();
+  }
+
+  RecentBook& book = *it;
+  if (sessionReadSeconds > 0) {
+    const uint64_t accumulated = static_cast<uint64_t>(book.readTimeSeconds) + sessionReadSeconds;
+    book.readTimeSeconds =
+        (accumulated > std::numeric_limits<uint32_t>::max()) ? std::numeric_limits<uint32_t>::max() : accumulated;
+  }
+  book.readPercent = (readPercent > 100) ? 100 : readPercent;
+
+  if (book.readPercent == 0 || book.readTimeSeconds == 0 || book.readPercent >= 100) {
+    book.remainingTimeSeconds = -1;
+  } else {
+    const uint64_t estimatedTotal = (static_cast<uint64_t>(book.readTimeSeconds) * 100ULL) / book.readPercent;
+    if (estimatedTotal <= book.readTimeSeconds) {
+      book.remainingTimeSeconds = -1;
+    } else {
+      const uint64_t remaining = estimatedTotal - book.readTimeSeconds;
+      book.remainingTimeSeconds =
+          (remaining > static_cast<uint64_t>(std::numeric_limits<int32_t>::max()))
+              ? std::numeric_limits<int32_t>::max()
+              : static_cast<int32_t>(remaining);
+    }
+  }
+  updateDerivedFields(book);
+
+  saveToFile();
 }
 
 bool RecentBooksStore::saveToFile() const {
@@ -136,8 +209,11 @@ bool RecentBooksStore::loadFromBinaryFile() {
         std::string title, author;
         serialization::readString(inputFile, title);
         serialization::readString(inputFile, author);
-        recentBooks.push_back({path, title, author, ""});
+        RecentBook stored = {path, title, author, "", 0, 0, -1};
+        updateDerivedFields(stored);
+        recentBooks.push_back(stored);
       } else {
+        updateDerivedFields(book);
         recentBooks.push_back(book);
       }
     }
@@ -162,7 +238,9 @@ bool RecentBooksStore::loadFromBinaryFile() {
         continue;
       }
 
-      recentBooks.push_back({path, title, author, coverBmpPath});
+      RecentBook stored = {path, title, author, coverBmpPath, 0, 0, -1};
+      updateDerivedFields(stored);
+      recentBooks.push_back(stored);
     }
 
     if (omitted > 0) {
@@ -180,4 +258,15 @@ bool RecentBooksStore::loadFromBinaryFile() {
   inputFile.close();
   LOG_DBG("RBS", "Recent books loaded from binary file (%d entries)", static_cast<int>(recentBooks.size()));
   return true;
+}
+
+void RecentBooksStore::updateDerivedFields(RecentBook& book) {
+  const int percent = clampPercent(static_cast<int>(book.readPercent));
+  book.readPercentText = std::to_string(percent) + "%";
+
+  std::string remainingText = "--";
+  if (book.remainingTimeSeconds > 0) {
+    remainingText = formatDuration(static_cast<uint32_t>(book.remainingTimeSeconds));
+  }
+  book.timingText = formatDuration(book.readTimeSeconds) + " \xC2\xB7 " + remainingText;
 }

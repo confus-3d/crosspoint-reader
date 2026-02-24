@@ -50,8 +50,11 @@ class LyraTheme : public BaseTheme {
   void drawList(const GfxRenderer& renderer, Rect rect, int itemCount, int selectedIndex,
                 const std::function<std::string(int index)>& rowTitle,
                 const std::function<std::string(int index)>& rowSubtitle,
-                const std::function<UIIcon(int index)>& rowIcon, const std::function<std::string(int index)>& rowValue,
-                bool highlightValue) const override;
+                const std::function<UIIcon(int index)>& rowIcon,
+                const std::function<std::string(int index)>& rowValue,
+                bool highlightValue,
+                const std::function<std::string(int index)>& rowSubtitleRight,
+                const std::function<int(int index)>& rowProgressPercent) const override;
   void drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
                        const char* btn4) const override;
   void drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const override;

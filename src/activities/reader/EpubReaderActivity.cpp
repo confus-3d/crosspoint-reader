@@ -101,12 +101,29 @@ void EpubReaderActivity::onEnter() {
   APP_STATE.openEpubPath = epub->getPath();
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getThumbBmpPath());
+  sessionStartMs = millis();
 
   // Trigger first update
   requestUpdate();
 }
 
 void EpubReaderActivity::onExit() {
+  if (epub) {
+    const unsigned long elapsedMs = millis() - sessionStartMs;
+    const uint32_t sessionReadSeconds = elapsedMs / 1000;
+
+    int readPercent = 0;
+    if (currentSpineIndex >= epub->getSpineItemsCount()) {
+      readPercent = 100;
+    } else if (epub->getBookSize() > 0 && section && section->pageCount > 0) {
+      const float chapterProgress = static_cast<float>(section->currentPage) / static_cast<float>(section->pageCount);
+      const float bookProgress = epub->calculateProgress(currentSpineIndex, chapterProgress) * 100.0f;
+      readPercent = clampPercent(static_cast<int>(bookProgress + 0.5f));
+    }
+
+    RECENT_BOOKS.updateReadingStats(epub->getPath(), sessionReadSeconds, static_cast<uint8_t>(readPercent));
+  }
+
   ActivityWithSubactivity::onExit();
 
   // Reset orientation back to portrait for the rest of the UI

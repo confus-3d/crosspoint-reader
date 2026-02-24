@@ -6,6 +6,7 @@
 #include <I18n.h>
 #include <Utf8.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -250,7 +251,10 @@ void LyraTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
                          const std::function<std::string(int index)>& rowTitle,
                          const std::function<std::string(int index)>& rowSubtitle,
                          const std::function<UIIcon(int index)>& rowIcon,
-                         const std::function<std::string(int index)>& rowValue, bool highlightValue) const {
+                         const std::function<std::string(int index)>& rowValue,
+                         bool highlightValue,
+                         const std::function<std::string(int index)>& rowSubtitleRight,
+                         const std::function<int(int index)>& rowProgressPercent) const {
   int rowHeight =
       (rowSubtitle != nullptr) ? LyraMetrics::values.listWithSubtitleRowHeight : LyraMetrics::values.listRowHeight;
   int pageItems = rect.height / rowHeight;
@@ -321,7 +325,15 @@ void LyraTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
     if (rowSubtitle != nullptr) {
       // Draw subtitle
       std::string subtitleText = rowSubtitle(i);
-      auto subtitle = renderer.truncatedText(SMALL_FONT_ID, subtitleText.c_str(), rowTextWidth);
+      int subtitleWidth = rowTextWidth;
+      if (rowSubtitleRight != nullptr) {
+        std::string subtitleRightText = rowSubtitleRight(i);
+        const int subtitleRightWidth = renderer.getTextWidth(SMALL_FONT_ID, subtitleRightText.c_str()) + hPaddingInSelection;
+        renderer.drawText(SMALL_FONT_ID, rect.x + contentWidth - LyraMetrics::values.contentSidePadding - subtitleRightWidth,
+                          itemY + 30, subtitleRightText.c_str(), true);
+        subtitleWidth = std::max(0, rowTextWidth - subtitleRightWidth - 8);
+      }
+      auto subtitle = renderer.truncatedText(SMALL_FONT_ID, subtitleText.c_str(), subtitleWidth);
       renderer.drawText(SMALL_FONT_ID, textX, itemY + 30, subtitle.c_str(), true);
     }
 
@@ -335,6 +347,23 @@ void LyraTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
 
       renderer.drawText(UI_10_FONT_ID, rect.x + contentWidth - LyraMetrics::values.contentSidePadding - valueWidth,
                         itemY + 6, valueText.c_str(), !(i == selectedIndex && highlightValue));
+    }
+
+    if (rowProgressPercent != nullptr) {
+      int progress = rowProgressPercent(i);
+      if (progress < 0) {
+        progress = 0;
+      } else if (progress > 100) {
+        progress = 100;
+      }
+      const int barX = rect.x + LyraMetrics::values.contentSidePadding + hPaddingInSelection;
+      const int barWidth = std::max(1, contentWidth - LyraMetrics::values.contentSidePadding * 2 - hPaddingInSelection * 2);
+      const int barY = itemY + rowHeight - 8;
+      renderer.drawLine(barX, barY, barX + barWidth - 1, barY, true);
+      const int markerX = barX + (barWidth - 1) * progress / 100;
+      const int fillWidth = std::max(1, markerX - barX + 1);
+      renderer.fillRect(barX, barY - 1, fillWidth, 3, true);
+      renderer.fillRect(markerX - 1, barY - 3, 3, 7, true);
     }
   }
 }

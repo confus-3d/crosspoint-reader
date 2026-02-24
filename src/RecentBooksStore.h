@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -7,6 +8,11 @@ struct RecentBook {
   std::string title;
   std::string author;
   std::string coverBmpPath;
+  uint32_t readTimeSeconds = 0;
+  uint8_t readPercent = 0;
+  int32_t remainingTimeSeconds = -1;
+  std::string readPercentText = "0%";
+  std::string timingText = "0m \xC2\xB7 --";
 
   bool operator==(const RecentBook& other) const { return path == other.path; }
 };
@@ -36,6 +42,7 @@ class RecentBooksStore {
 
   void updateBook(const std::string& path, const std::string& title, const std::string& author,
                   const std::string& coverBmpPath);
+  void updateReadingStats(const std::string& path, uint32_t sessionReadSeconds, uint8_t readPercent);
 
   // Get the list of recent books (most recent first)
   const std::vector<RecentBook>& getBooks() const { return recentBooks; }
@@ -50,6 +57,7 @@ class RecentBooksStore {
 
  private:
   bool loadFromBinaryFile();
+  static void updateDerivedFields(RecentBook& book);
 };
 
 // Helper macro to access recent books store

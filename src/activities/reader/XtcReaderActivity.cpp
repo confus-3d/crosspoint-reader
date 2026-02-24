@@ -41,12 +41,36 @@ void XtcReaderActivity::onEnter() {
   APP_STATE.openEpubPath = xtc->getPath();
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(xtc->getPath(), xtc->getTitle(), xtc->getAuthor(), xtc->getThumbBmpPath());
+  sessionStartMs = millis();
 
   // Trigger first update
   requestUpdate();
 }
 
 void XtcReaderActivity::onExit() {
+  if (xtc) {
+    const unsigned long elapsedMs = millis() - sessionStartMs;
+    const uint32_t sessionReadSeconds = elapsedMs / 1000;
+
+    int readPercent = 0;
+    const uint32_t pageCount = xtc->getPageCount();
+    if (pageCount > 0) {
+      if (currentPage >= pageCount) {
+        readPercent = 100;
+      } else {
+        const float progress = (currentPage + 1) * 100.0f / static_cast<float>(pageCount);
+        readPercent = static_cast<int>(progress + 0.5f);
+        if (readPercent < 0) {
+          readPercent = 0;
+        } else if (readPercent > 100) {
+          readPercent = 100;
+        }
+      }
+    }
+
+    RECENT_BOOKS.updateReadingStats(xtc->getPath(), sessionReadSeconds, static_cast<uint8_t>(readPercent));
+  }
+
   ActivityWithSubactivity::onExit();
 
   APP_STATE.readerActivityLoadCount = 0;

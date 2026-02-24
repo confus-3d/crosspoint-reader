@@ -13,6 +13,7 @@ class TxtReaderActivity final : public ActivityWithSubactivity {
   int currentPage = 0;
   int totalPages = 1;
   int pagesUntilFullRefresh = 0;
+  unsigned long sessionStartMs = 0;
 
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;

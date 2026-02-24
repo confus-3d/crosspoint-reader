@@ -6,6 +6,7 @@
 #include <Logging.h>
 #include <Utf8.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 
@@ -187,7 +188,10 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
                          const std::function<std::string(int index)>& rowTitle,
                          const std::function<std::string(int index)>& rowSubtitle,
                          const std::function<UIIcon(int index)>& rowIcon,
-                         const std::function<std::string(int index)>& rowValue, bool highlightValue) const {
+                         const std::function<std::string(int index)>& rowValue,
+                         bool highlightValue,
+                         const std::function<std::string(int index)>& rowSubtitleRight,
+                         const std::function<int(int index)>& rowProgressPercent) const {
   int rowHeight =
       (rowSubtitle != nullptr) ? BaseMetrics::values.listWithSubtitleRowHeight : BaseMetrics::values.listRowHeight;
   int pageItems = rect.height / rowHeight;
@@ -238,7 +242,16 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
     if (rowSubtitle != nullptr) {
       // Draw subtitle
       std::string subtitleText = rowSubtitle(i);
-      auto subtitle = renderer.truncatedText(UI_10_FONT_ID, subtitleText.c_str(), textWidth);
+      int subtitleWidth = textWidth;
+      if (rowSubtitleRight != nullptr) {
+        std::string subtitleRightText = rowSubtitleRight(i);
+        const int subtitleRightWidth = renderer.getTextWidth(UI_10_FONT_ID, subtitleRightText.c_str());
+        renderer.drawText(UI_10_FONT_ID,
+                          rect.x + contentWidth - BaseMetrics::values.contentSidePadding - subtitleRightWidth,
+                          itemY + 30, subtitleRightText.c_str(), i != selectedIndex);
+        subtitleWidth = std::max(0, textWidth - subtitleRightWidth - 8);
+      }
+      auto subtitle = renderer.truncatedText(UI_10_FONT_ID, subtitleText.c_str(), subtitleWidth);
       renderer.drawText(UI_10_FONT_ID, rect.x + BaseMetrics::values.contentSidePadding, itemY + 30, subtitle.c_str(),
                         i != selectedIndex);
     }
@@ -249,6 +262,24 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
       const auto valueTextWidth = renderer.getTextWidth(UI_10_FONT_ID, valueText.c_str());
       renderer.drawText(UI_10_FONT_ID, rect.x + contentWidth - BaseMetrics::values.contentSidePadding - valueTextWidth,
                         itemY, valueText.c_str(), i != selectedIndex);
+    }
+
+    if (rowProgressPercent != nullptr) {
+      int progress = rowProgressPercent(i);
+      if (progress < 0) {
+        progress = 0;
+      } else if (progress > 100) {
+        progress = 100;
+      }
+      const int barX = rect.x + BaseMetrics::values.contentSidePadding;
+      const int barWidth = std::max(1, contentWidth - BaseMetrics::values.contentSidePadding * 2);
+      const int barY = itemY + rowHeight - 8;
+      const bool color = i != selectedIndex;
+      renderer.drawLine(barX, barY, barX + barWidth - 1, barY, color);
+      const int markerX = barX + (barWidth - 1) * progress / 100;
+      const int fillWidth = std::max(1, markerX - barX + 1);
+      renderer.fillRect(barX, barY - 1, fillWidth, 3, color);
+      renderer.fillRect(markerX - 1, barY - 3, 3, 7, color);
     }
   }
 }

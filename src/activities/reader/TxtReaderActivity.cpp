@@ -57,12 +57,31 @@ void TxtReaderActivity::onEnter() {
   APP_STATE.openEpubPath = filePath;
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(filePath, fileName, "", "");
+  sessionStartMs = millis();
 
   // Trigger first update
   requestUpdate();
 }
 
 void TxtReaderActivity::onExit() {
+  if (txt) {
+    const unsigned long elapsedMs = millis() - sessionStartMs;
+    const uint32_t sessionReadSeconds = elapsedMs / 1000;
+
+    int readPercent = 0;
+    if (totalPages > 0) {
+      const float progress = (currentPage + 1) * 100.0f / totalPages;
+      readPercent = static_cast<int>(progress + 0.5f);
+      if (readPercent < 0) {
+        readPercent = 0;
+      } else if (readPercent > 100) {
+        readPercent = 100;
+      }
+    }
+
+    RECENT_BOOKS.updateReadingStats(txt->getPath(), sessionReadSeconds, static_cast<uint8_t>(readPercent));
+  }
+
   ActivityWithSubactivity::onExit();
 
   // Reset orientation back to portrait for the rest of the UI
