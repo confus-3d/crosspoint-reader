@@ -82,8 +82,7 @@ void XtcReaderActivity::onExit() {
   ActivityWithSubactivity::onExit();
 
   if (xtc && readingSessionStartMs != 0) {
-    const uint32_t elapsedSeconds = (millis() - readingSessionStartMs) / 1000U;
-    addReadingTimeToCache(xtc->getCachePath(), elapsedSeconds);
+    RECENT_BOOKS.addBookReadingTime(xtc->getPath(), (millis() - readingSessionStartMs) / 1000U);
   }
   readingSessionStartMs = 0;
 
@@ -381,6 +380,16 @@ void XtcReaderActivity::saveProgress() const {
     data[3] = (currentPage >> 24) & 0xFF;
     f.write(data, 4);
     f.close();
+  }
+
+  const uint32_t pageCount = xtc->getPageCount();
+  if (pageCount > 0) {
+    uint32_t clampedPage = currentPage;
+    if (clampedPage >= pageCount) {
+      clampedPage = pageCount - 1;
+    }
+    const int percent = static_cast<int>(((clampedPage + 1U) * 100U) / pageCount);
+    RECENT_BOOKS.updateBookProgress(xtc->getPath(), percent);
   }
 }
 

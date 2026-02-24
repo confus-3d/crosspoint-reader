@@ -143,7 +143,7 @@ void EpubReaderActivity::onExit() {
 
   if (epub && readingSessionStartMs != 0) {
     const uint32_t elapsedSeconds = (millis() - readingSessionStartMs) / 1000U;
-    addReadingTimeToCache(epub->getCachePath(), elapsedSeconds);
+    RECENT_BOOKS.addBookReadingTime(epub->getPath(), elapsedSeconds);
   }
   readingSessionStartMs = 0;
 
@@ -686,6 +686,13 @@ void EpubReaderActivity::saveProgress(int spineIndex, int currentPage, int pageC
     LOG_DBG("ERS", "Progress saved: Chapter %d, Page %d", spineIndex, currentPage);
   } else {
     LOG_ERR("ERS", "Could not save progress!");
+  }
+
+  if (pageCount > 0) {
+    const float sectionProgress = static_cast<float>(currentPage) / static_cast<float>(pageCount);
+    const float bookProgress = epub->calculateProgress(spineIndex, sectionProgress);
+    const int percent = static_cast<int>(bookProgress * 100.0f + 0.5f);
+    RECENT_BOOKS.updateBookProgress(epub->getPath(), percent);
   }
 }
 void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int orientedMarginTop,
