@@ -111,11 +111,7 @@ std::vector<RecentBookListRowData> RecentBooksStore::buildListRowData(const std:
   const int pageItems = std::max(1, contentHeight / rowHeight);
   const int totalPages = (static_cast<int>(books.size()) + pageItems - 1) / pageItems;
   const int contentWidth = pageWidth - (totalPages > 1 ? (metrics.scrollBarWidth + metrics.scrollBarRightOffset)
-<<<<<<< HEAD
                                                        : BASE_CONTENT_WIDTH_OFFSET);
-=======
-                                                       : BASE_CONTENT_WIDTH_OFFSET);
->>>>>>> 6b345f057e004bcec21e9449b42300e8787ac48b
   const int subtitleFont = UI_10_FONT_ID;
   const int subtitleLeftX = metrics.contentSidePadding;
 
@@ -132,15 +128,9 @@ std::vector<RecentBookListRowData> RecentBooksStore::buildListRowData(const std:
   return rows;
 }
 
-<<<<<<< HEAD
 void RecentBooksStore::drawMetricsOverlay(const GfxRenderer& renderer,
                                           const std::vector<RecentBookListRowData>& rowData, const size_t selectorIndex,
                                           const int contentTop, const int contentHeight,
-=======
-void RecentBooksStore::drawMetricsOverlay(const GfxRenderer& renderer,
-                                          const std::vector<RecentBookListRowData>& rowData, const size_t selectorIndex,
-                                          const int contentTop, const int contentHeight,
->>>>>>> 6b345f057e004bcec21e9449b42300e8787ac48b
                                           const ThemeMetrics& metrics) const {
   if (rowData.empty()) {
     return;
@@ -160,21 +150,13 @@ int RecentBooksStore::getBookProgressPercent(const RecentBook& book) const {
   return clampProgressPercent(book.progressPercent);
 }
 
-<<<<<<< HEAD
 std::string RecentBooksStore::getBookProgressValue(const RecentBook& book) const { return book.progressValue; }
-=======
-std::string RecentBooksStore::getBookProgressValue(const RecentBook& book) const { return book.progressValue; }
->>>>>>> 6b345f057e004bcec21e9449b42300e8787ac48b
 
 std::string RecentBooksStore::getBookReadingTime(const RecentBook& book) const {
   return formatDuration(book.readingSeconds);
 }
 
-<<<<<<< HEAD
 std::string RecentBooksStore::getBookMetricsSubtitle(const RecentBook& book) const { return book.metricsSubtitle; }
-=======
-std::string RecentBooksStore::getBookMetricsSubtitle(const RecentBook& book) const { return book.metricsSubtitle; }
->>>>>>> 6b345f057e004bcec21e9449b42300e8787ac48b
 
 bool RecentBooksStore::saveToFile() const {
   Storage.mkdir("/.crosspoint");

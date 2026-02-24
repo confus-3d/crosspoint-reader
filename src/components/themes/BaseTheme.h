@@ -115,11 +115,7 @@ class BaseTheme {
                         const std::function<std::string(int index)>& rowTitle,
                         const std::function<std::string(int index)>& rowSubtitle = nullptr,
                         const std::function<UIIcon(int index)>& rowIcon = nullptr,
-<<<<<<< HEAD
                         const std::function<std::string(int index)>& rowValue = nullptr, bool highlightValue = false,
-=======
-                        const std::function<std::string(int index)>& rowValue = nullptr, bool highlightValue = false,
->>>>>>> 6b345f057e004bcec21e9449b42300e8787ac48b
                         const std::function<int(int index)>& rowProgress = nullptr) const;
   virtual void drawHeader(const GfxRenderer& renderer, Rect rect, const char* title,
                           const char* subtitle = nullptr) const;
